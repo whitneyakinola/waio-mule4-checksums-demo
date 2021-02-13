@@ -15,7 +15,7 @@ http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/fil
 	<http:listener-config name="HTTP_Listener_config"
 		doc:name="HTTP Listener config"
 		doc:id="7a099703-1e74-4c3c-8f08-26b3ce83a694"
-		basePath="${http.base_path}">
+		basePath= "${http.base_path}">
 		<http:listener-connection host="0.0.0.0"
 			port="8081" />
 	</http:listener-config>
