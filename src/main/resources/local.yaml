@@ -1,0 +1,10 @@
+http:
+  port: "8081"
+  base_path: "/checksum"
+  original_path: "/original"
+  tampered_path: "/tampered"
+
+doc:
+  original_file_path: "C:/Temp/sample.docx"
+  tampered_file_path: "C:/Temp/sample_tampered.docx"
+  checksum: "2D0874D2E4829A66E9607FE3714C1776E585E3F6E4CD4C06662FF22A3B6CF0E6"

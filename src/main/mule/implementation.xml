@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:dropbox="http://www.mulesoft.org/schema/mule/dropbox"
+	xmlns:crypto="http://www.mulesoft.org/schema/mule/crypto"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/crypto http://www.mulesoft.org/schema/mule/crypto/current/mule-crypto.xsd
+http://www.mulesoft.org/schema/mule/dropbox http://www.mulesoft.org/schema/mule/dropbox/current/mule-dropbox.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
+	<http:listener-config name="HTTP_Listener_config"
+		doc:name="HTTP Listener config"
+		doc:id="7a099703-1e74-4c3c-8f08-26b3ce83a694"
+		basePath="${http.base_path}">
+		<http:listener-connection host="0.0.0.0"
+			port="8081" />
+	</http:listener-config>
+	<configuration-properties
+		doc:name="Configuration properties"
+		doc:id="5f2f8b23-486a-4fef-a5bf-d4f078cf7dfe" file="local.yaml" />
+	<flow name="original-copy-checksum-flow"
+		doc:id="dc102ef8-6b6a-4fcd-8393-9b3047baa300">
+		<http:listener doc:name="Listener"
+			doc:id="ddf7a56d-101b-42a7-9850-d1c8b8cba80b"
+			config-ref="HTTP_Listener_config" path="${http.original_path}" />
+		<file:read doc:name="Original Copy"
+			doc:id="3058aa9c-ebbf-4724-8892-e417ec6c84a2"
+			path="${doc.original_file_path}" />
+		<crypto:calculate-checksum
+			doc:name="Calculate checksum"
+			doc:id="2585404a-47a5-413d-9be2-209842bf413a" target="actualChecksum" />
+		<logger level="INFO" doc:name="Actual File Checksum"
+			doc:id="ed08a39d-7fb4-4693-8556-463aebe43d37"
+			message='#["The received file actual checksum: " ++ vars.actualChecksum]' />
+		<crypto:validate-checksum
+			doc:name="Validate checksum"
+			doc:id="ba1755f1-720f-46a1-b6df-d962e1b8b90c"
+			expected="#[lower(p('doc.checksum'))]" />
+		<logger level="INFO" doc:name="Expected File Checksum"
+			doc:id="39d67f80-59f7-4181-b882-7cd791bf498e"
+			message='#["The received file expected checksum from the original file: " ++ vars.actualChecksum]' />
+		<error-handler>
+			<on-error-propagate enableNotifications="true"
+				logException="true" doc:name="On Error Propagate"
+				doc:id="c0ef90b0-97b8-4f7f-9a78-70fa548cbfd5">
+				<logger level="ERROR" doc:name="Error Message"
+					doc:id="25e5e62c-6957-449f-952b-ecb9c5131e96"
+					message='#["Invalid Checksum.  This file has an error or was tampered with by a 3rd party"]' />
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<flow name="tampered-checksum-flow"
+		doc:id="52ede646-4a03-47d8-84ad-d973b0bbd4cb">
+		<http:listener doc:name="Listener"
+			doc:id="e338c9d8-6cdc-4776-b882-2920f33cf491"
+			config-ref="HTTP_Listener_config" path="${http.tampered_path}" />
+		<file:read doc:name="Tampered File"
+			doc:id="ae732123-848e-47bf-a7d5-5eea0478c4ca"
+			path="${doc.tampered_file_path}" />
+		<crypto:calculate-checksum
+			doc:name="Calculate checksum"
+			doc:id="fbb1e55c-9b48-44ec-81b0-3ec50afeeb8c" target="actualChecksum" />
+		<logger level="INFO" doc:name="Actual File Checksum"
+			doc:id="5df047c8-ba0e-487e-a292-d99da31146d7"
+			message='#["The received file actual checksum: " ++ vars.actualChecksum]' />
+		<crypto:validate-checksum
+			doc:name="Validate checksum"
+			doc:id="e15a1c2d-00a5-4280-b2be-8aa5b24d44f4"
+			expected="#[lower(p('doc.checksum'))]" />
+		<logger level="INFO" doc:name="Expected File Checksum"
+			doc:id="e8144249-b4be-499e-a1a6-609b05dd255e"
+			message='#["The received file expected checksum from the original file: " ++ vars.actualChecksum]' />
+		<error-handler>
+			<on-error-propagate enableNotifications="true"
+				logException="true" doc:name="On Error Propagate"
+				doc:id="a7631f3e-10db-494a-a3f4-8501e9b14479">
+				<logger level="ERROR" doc:name="Error Message"
+					doc:id="0a455358-3931-42cc-9e1c-5918a598e3f5"
+					message='#["Invalid Checksum.  This file has an error or was tampered with by a 3rd party"]' />
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+</mule>
