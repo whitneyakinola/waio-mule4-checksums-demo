@@ -1,17 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:file="http://www.mulesoft.org/schema/mule/file"
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:file="http://www.mulesoft.org/schema/mule/file"
 	xmlns:dropbox="http://www.mulesoft.org/schema/mule/dropbox"
 	xmlns:crypto="http://www.mulesoft.org/schema/mule/crypto"
 	xmlns:http="http://www.mulesoft.org/schema/mule/http"
 	xmlns="http://www.mulesoft.org/schema/mule/core"
 	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/crypto http://www.mulesoft.org/schema/mule/crypto/current/mule-crypto.xsd
 http://www.mulesoft.org/schema/mule/dropbox http://www.mulesoft.org/schema/mule/dropbox/current/mule-dropbox.xsd
-http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
 	<http:listener-config name="HTTP_Listener_config"
 		doc:name="HTTP Listener config"
 		doc:id="7a099703-1e74-4c3c-8f08-26b3ce83a694"
@@ -39,10 +40,22 @@ http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/fil
 		<crypto:validate-checksum
 			doc:name="Validate checksum"
 			doc:id="ba1755f1-720f-46a1-b6df-d962e1b8b90c"
-			expected="#[lower(p('doc.checksum'))]" />
+			expected="#[lower(p('doc.expected_checksum'))]" />
 		<logger level="INFO" doc:name="Expected File Checksum"
 			doc:id="39d67f80-59f7-4181-b882-7cd791bf498e"
 			message='#["The received file expected checksum from the original file: " ++ vars.actualChecksum]' />
+		<ee:transform doc:name="Response" doc:id="9056e0b8-990c-46d6-8b57-1230f683975a" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	status: "Success!",
+	message: "The received file expected checksum from the original file: " ++ vars.actualChecksum	
+}
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
 		<error-handler>
 			<on-error-propagate enableNotifications="true"
 				logException="true" doc:name="On Error Propagate"
@@ -50,6 +63,18 @@ http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/fil
 				<logger level="ERROR" doc:name="Error Message"
 					doc:id="25e5e62c-6957-449f-952b-ecb9c5131e96"
 					message='#["Invalid Checksum.  This file has an error or was tampered with by a 3rd party"]' />
+				<ee:transform doc:name="Response" doc:id="9189145e-338b-4efc-b4af-1ff44ced9941">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	status: "Error",
+	message: "Invalid Checksum.  This file has an error or was tampered with by a 3rd party."
+}
+]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
 			</on-error-propagate>
 		</error-handler>
 	</flow>
@@ -57,7 +82,11 @@ http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/fil
 		doc:id="52ede646-4a03-47d8-84ad-d973b0bbd4cb">
 		<http:listener doc:name="Listener"
 			doc:id="e338c9d8-6cdc-4776-b882-2920f33cf491"
-			config-ref="HTTP_Listener_config" path="${http.tampered_path}" />
+			config-ref="HTTP_Listener_config" path="${http.tampered_path}" >
+			<http:error-response >
+				<http:body ><![CDATA[#[output application/json --- payload]]]></http:body>
+			</http:error-response>
+		</http:listener>
 		<file:read doc:name="Tampered File"
 			doc:id="ae732123-848e-47bf-a7d5-5eea0478c4ca"
 			path="${doc.tampered_file_path}" />
@@ -70,17 +99,41 @@ http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/fil
 		<crypto:validate-checksum
 			doc:name="Validate checksum"
 			doc:id="e15a1c2d-00a5-4280-b2be-8aa5b24d44f4"
-			expected="#[lower(p('doc.checksum'))]" />
+			expected="#[lower(p('doc.expected_checksum'))]" />
 		<logger level="INFO" doc:name="Expected File Checksum"
 			doc:id="e8144249-b4be-499e-a1a6-609b05dd255e"
 			message='#["The received file expected checksum from the original file: " ++ vars.actualChecksum]' />
+		<ee:transform doc:name="Response" doc:id="986dd07f-4a69-44d1-a744-d495edcd9085" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	status: "Success!",
+	message: "The received file expected checksum from the original file: " ++ vars.actualChecksum	
+}
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
 		<error-handler>
 			<on-error-propagate enableNotifications="true"
 				logException="true" doc:name="On Error Propagate"
 				doc:id="a7631f3e-10db-494a-a3f4-8501e9b14479">
 				<logger level="ERROR" doc:name="Error Message"
 					doc:id="0a455358-3931-42cc-9e1c-5918a598e3f5"
-					message='#["Invalid Checksum.  This file has an error or was tampered with by a 3rd party"]' />
+					message='#["Invalid Checksum.  This file has an error or was tampered with by a 3rd party."]' />
+				<ee:transform doc:name="Response" doc:id="67bfeeca-a199-4d9d-87b3-43ae4cf70a2b" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	status: "Error!",
+	message: "Invalid Checksum.  This file has an error or was tampered with by a 3rd party."
+}
+]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
 			</on-error-propagate>
 		</error-handler>
 	</flow>
